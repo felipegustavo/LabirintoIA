@@ -4,397 +4,266 @@ var canvas = null;
 // Contexto do canvas, será usado para efetuar o desenho no canvas
 var ctx = null;
 
-// Sprite usados no jogo
-var spritesheet = null;
+// Sprite usado no jogo
+var sprites = null;
+
+// Tamanho do labirinto
+var mazeW = 16;
+var mazeH = 16;
+
+// Tamanho de cada um dos tiles do sprite
+var tileW = 32;
+var tileH = 32;
+
+// Define o espaço em que podemos andar
+var walkableSpace = 0;
+
+// Define o tamnaho máximo do labirinto
+var mazeSize =	mazeW * mazeH;
+
+// define o inicio e fim do labirinto
+var pathStart = [0,0];
+var pathEnd = [15,15];
+var currentPath = [];
 
 // Matriz bidimensional que representa o labirinto
 var maze = [[]];
 
-// Tamanho do labirinto
-var mazeWidth = 18;
-var mazeHeight = 18;
+// Reseta o labirinto
+function resetMaze()
+{
+	maze[0] = [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+	maze[1] = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+	maze[2] = [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1];
+	maze[3] = [1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1];
+	maze[4] = [1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1];
+	maze[5] = [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1];
+	maze[6] = [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1];
+	maze[7] = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1];
+	maze[8] = [1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1];
+	maze[9] = [1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1];
+	maze[10] = [1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1];
+	maze[11] = [1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1];
+	maze[12] = [1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1];
+	maze[13] = [1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1];
+	maze[14] = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0];
+	maze[15] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0];	
+}
 
-// Tamanho de cada um dos tiles do sprite
-var tileWidth = 32;
-var tileHeight = 32;
 
-// start and end of path
-var pathStart = [mazeWidth,mazeHeight];
-var pathEnd = [0,0];
-var currentPath = [];
-
-// Quando a pagina for carregada
+// Quando a pagina for carregada essa função é chamada
 function onload()
 {
-	canvas = document.getElementById('gameCanvas');
+	canvas = document.getElementById('canvas');
 
-	// define o tamanho do labirinto
-	canvas.width = mazeWidth * tileWidth;
-	canvas.height = mazeHeight * tileHeight;
+	// Define o tamanho do canvas onde o labirinto será desenhado
+	canvas.width = mazeW * tileW;
+	canvas.height = mazeH * tileH;
 
+	// Define o contexto do canvas, 2d pois o jogo é em 2d
 	ctx = canvas.getContext("2d");
 
-	spritesheet = new Image();
-	spritesheet.src = 'spritesheet.png';
-	spritesheet.onload = loaded;
+	// Carrega os sprites
+	sprites = new Image();
+	sprites.src = 'sprites.png';
+	sprites.onload = loadSprite;
 }
 
-function loaded()
+// Quando o sprite for carregado desenhe o labirinto
+function loadSprite()
 {
-	createmaze();
-}
-
-
-// Essa função deve ser trocada pela geração randomica
-// fill the maze with walls
-function createmaze()
-{
-	// create emptiness
-	for (var x=0; x < mazeWidth; x++)
-	{
-		maze[x] = [];
-
-		for (var y=0; y < mazeHeight; y++)
-		{
-			maze[x][y] = 0;
-		}
-	}
-
-	// scatter some walls
-	for (var x=0; x < mazeWidth; x++)
-	{
-		for (var y=0; y < mazeHeight; y++)
-		{
-			if (Math.random() > 0.75)
-			maze[x][y] = 1;
-		}
-	}
-
-	maze[0][0] = 0;
-	maze[17][17] = 0;
-
-	// calculate initial possible path
-	// note: unlikely but possible to never find one...
-	currentPath = [];
-	while (currentPath.length == 0)
-	{
-		//pathStart = [Math.floor(Math.random()*mazeWidth),Math.floor(Math.random()*mazeHeight)];
-		pathStart = [0,0];
-		pathEnd = [17,17];
-		//pathEnd = [Math.floor(Math.random()*mazeWidth),Math.floor(Math.random()*mazeHeight)];
-		if (maze[pathStart[0]][pathStart[1]] == 0)
-		currentPath = findPath(maze,pathStart,pathEnd);
-	}
+	resetMaze();
 	drawMaze();
+	var result = calculatePath();
 
+	for(var i = 0; i < result.length; i++) 
+	{
+		var x = result[i][0];
+		var y = result[i][1];
+		maze[x][y] = 4;
+	}
+
+	drawMaze();	
 }
 
+// Desenha o labirinto no canvas
 function drawMaze()
 {
+	// Define qual sprite será desenhado
 	var spriteNum = 0;
 
+	// Apaga o contéudo do canvas, para que seja possivél desenhar novamente
 	ctx.fillStyle = '#000000';
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-	for (var x=0; x < mazeWidth; x++)
+	// Passa por cada posição da matriz maze e desenha um sprite de acordo com o valor inteiro na posição i,j
+	for (var x=0; x < mazeW; x++)
 	{
-		for (var y=0; y < mazeHeight; y++)
-		{
-			// seleciona o sprite para desenhar
-			switch(maze[x][y])
+		for (var y=0; y < mazeH; y++)
+		{	
+			if (x == 0 && y == 0)
 			{
-			case 1:
-				spriteNum = 1;
-				break;
-			default:
-				spriteNum = 0;
-				break;
-			}
-			ctx.drawImage(spritesheet, spriteNum*tileWidth, 0, tileWidth, tileHeight, x*tileWidth, y*tileHeight, tileWidth, tileHeight);
+				ctx.drawImage(sprites, 0 * tileW, 0, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+				ctx.drawImage(sprites, 2 * tileW, 0, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+			} else if (x == 15 && y == 15) {
+				ctx.drawImage(sprites, 0 * tileW, 0, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+				ctx.drawImage(sprites, 3 * tileW, 0, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+			} else if (maze[x][y] == 4) {
+				ctx.drawImage(sprites, 0 * tileW, 0, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+				ctx.drawImage(sprites, 4 * tileW, 0, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+			} else {
+				ctx.drawImage(sprites, maze[x][y] * tileW, 0, tileW, tileH, x * tileW, y * tileH, tileW, tileH);
+			}			
 		}
-	}
-
-	for (rp=0; rp<currentPath.length; rp++)
-	{
-		switch(rp)
-		{
-		case 0:
-			spriteNum = 2; // start
-			break;
-		case currentPath.length-1:
-			spriteNum = 3; // end
-			break;
-		default:
-			spriteNum = 4; // path node
-			break;
-		}
-
-		ctx.drawImage(spritesheet,
-		spriteNum*tileWidth, 0,
-		tileWidth, tileHeight,
-		currentPath[rp][0]*tileWidth,
-		currentPath[rp][1]*tileHeight,
-		tileWidth, tileHeight);
 	}		
 }
 
-function findPath(maze, pathStart, pathEnd)
+// Define a nossa heuristica, a distância de mahathan
+// Sem movimentos lineares considera apenas as direções cardinais
+function ManhattanDist(Point, Goal)
 {
-	// shortcuts for speed
-	var	abs = Math.abs;
-	var	max = Math.max;
-	var	pow = Math.pow;
-	var	sqrt = Math.sqrt;
-
-	// the maze data are integers:
-	// anything higher than this number is considered blocked
-	// this is handy is you use numbered sprites, more than one
-	// of which is walkable road, grass, mud, etc
-	var maxWalkableTileNum = 0;
-
-	// keep track of the maze dimensions
-    // Note that this A-star implementation expects the maze array to be square: 
-	// it must have equal height and width. If your game maze is rectangular, 
-	// just fill the array with dummy values to pad the empty space.
-	var mazeWidth = maze[0].length;
-	var mazeHeight = maze.length;
-	var mazeSize =	mazeWidth * mazeHeight;
-
-	// which heuristic should we use?
-	// default: no diagonals (Manhattan)
-	var distanceFunction = ManhattanDistance;
-	var findNeighbours = function(){}; // empty
-
-	/*
-
-	// alternate heuristics, depending on your game:
-
-	// diagonals allowed but no sqeezing through cracks:
-	var distanceFunction = DiagonalDistance;
-	var findNeighbours = DiagonalNeighbours;
-
-	// diagonals and squeezing through cracks allowed:
-	var distanceFunction = DiagonalDistance;
-	var findNeighbours = DiagonalNeighboursFree;
-
-	// euclidean but no squeezing through cracks:
-	var distanceFunction = EuclideanDistance;
-	var findNeighbours = DiagonalNeighbours;
-
-	// euclidean and squeezing through cracks allowed:
-	var distanceFunction = EuclideanDistance;
-	var findNeighbours = DiagonalNeighboursFree;
-
-	*/
-
-	// distanceFunction functions
-	// these return how far away a point is to another
-
-	function ManhattanDistance(Point, Goal)
-	{	// linear movement - no diagonals - just cardinal directions (NSEW)
-		return abs(Point.x - Goal.x) + abs(Point.y - Goal.y);
-	}
-
-	function DiagonalDistance(Point, Goal)
-	{	// diagonal movement - assumes diag dist is 1, same as cardinals
-		return max(abs(Point.x - Goal.x), abs(Point.y - Goal.y));
-	}
-
-	function EuclideanDistance(Point, Goal)
-	{	// diagonals are considered a little farther than cardinal directions
-		// diagonal movement using Euclide (AC = sqrt(AB^2 + BC^2))
-		// where AB = x2 - x1 and BC = y2 - y1 and AC will be [x3, y3]
-		return sqrt(pow(Point.x - Goal.x, 2) + pow(Point.y - Goal.y, 2));
-	}
-
-	// Neighbours functions, used by findNeighbours function
-	// to locate adjacent available cells that aren't blocked
-
-	// Returns every available North, South, East or West
-	// cell that is empty. No diagonals,
-	// unless distanceFunction function is not Manhattan
-	function Neighbours(x, y)
-	{
-		var	N = y - 1,
-		S = y + 1,
-		E = x + 1,
-		W = x - 1,
-		myN = N > -1 && canWalkHere(x, N),
-		myS = S < mazeHeight && canWalkHere(x, S),
-		myE = E < mazeWidth && canWalkHere(E, y),
-		myW = W > -1 && canWalkHere(W, y),
-		result = [];
-		if(myN)
-		result.push({x:x, y:N});
-		if(myE)
-		result.push({x:E, y:y});
-		if(myS)
-		result.push({x:x, y:S});
-		if(myW)
-		result.push({x:W, y:y});
-		findNeighbours(myN, myS, myE, myW, N, S, E, W, result);
-		return result;
-	}
-
-	// returns every available North East, South East,
-	// South West or North West cell - no squeezing through
-	// "cracks" between two diagonals
-	function DiagonalNeighbours(myN, myS, myE, myW, N, S, E, W, result)
-	{
-		if(myN)
-		{
-			if(myE && canWalkHere(E, N))
-			result.push({x:E, y:N});
-			if(myW && canWalkHere(W, N))
-			result.push({x:W, y:N});
-		}
-		if(myS)
-		{
-			if(myE && canWalkHere(E, S))
-			result.push({x:E, y:S});EuclideanDistance
-			if(myW && canWalkHere(W, S))
-			result.push({x:W, y:S});
-		}
-	}
-
-	// returns every available North East, South East,
-	// South West or North West cell including the times that
-	// you would be squeezing through a "crack"
-	function DiagonalNeighboursFree(myN, myS, myE, myW, N, S, E, W, result)
-	{
-		myN = N > -1;
-		myS = S < mazeHeight;
-		myE = E < mazeWidth;
-		myW = W > -1;
-		if(myE)
-		{
-			if(myN && canWalkHere(E, N))
-			result.push({x:E, y:N});
-			if(myS && canWalkHere(E, S))
-			result.push({x:E, y:S});
-		}
-		if(myW)
-		{
-			if(myN && canWalkHere(W, N))
-			result.push({x:W, y:N});
-			if(myS && canWalkHere(W, S))
-			result.push({x:W, y:S});
-		}
-	}
-
-	// returns boolean value (maze cell is available and open)
-	function canWalkHere(x, y)
-	{
-		return ((maze[x] != null) &&
-			(maze[x][y] != null) &&
-			(maze[x][y] <= maxWalkableTileNum));
-	};
-
-	// Node function, returns a new object with Node properties
-	// Used in the calculatePath function to store route costs, etc.
-	function Node(Parent, Point)
-	{
-		var newNode = {
-			// pointer to another Node object
-			Parent:Parent,
-			// array index of this Node in the maze linear array
-			value:Point.x + (Point.y * mazeWidth),
-			// the location coordinates of this Node
-			x:Point.x,
-			y:Point.y,
-			// the heuristic estimated cost
-			// of an entire path using this node
-			f:0,
-			// the distanceFunction cost to get
-			// from the starting point to this node
-			g:0
-		};
-
-		return newNode;
-	}
-
-	// Path function, executes AStar algorithm operations
-	function calculatePath()
-	{
-		// create Nodes from the Start and End x,y coordinates
-		var	mypathStart = Node(null, {x:pathStart[0], y:pathStart[1]});
-		var mypathEnd = Node(null, {x:pathEnd[0], y:pathEnd[1]});
-		// create an array that will contain all maze cells
-		var AStar = new Array(mazeSize);
-		// list of currently open Nodes
-		var Open = [mypathStart];
-		// list of closed Nodes
-		var Closed = [];
-		// list of the final output array
-		var result = [];
-		// reference to a Node (that is nearby)
-		var myNeighbours;
-		// reference to a Node (that we are considering now)
-		var myNode;
-		// reference to a Node (that starts a path in question)
-		var myPath;
-		// temp integer variables used in the calculations
-		var length, max, min, i, j;
-		// iterate through the open list until none are left
-		while(length = Open.length)
-		{
-			max = mazeSize;
-			min = -1;
-			for(i = 0; i < length; i++)
-			{
-				if(Open[i].f < max)
-				{
-					max = Open[i].f;
-					min = i;
-				}
-			}
-			// grab the next node and remove it from Open array
-			myNode = Open.splice(min, 1)[0];
-			// is it the destination node?
-			if(myNode.value === mypathEnd.value)
-			{
-				myPath = Closed[Closed.push(myNode) - 1];
-				do
-				{
-					result.push([myPath.x, myPath.y]);
-				}
-				while (myPath = myPath.Parent);
-				// clear the working arrays
-				AStar = Closed = Open = [];
-				// we want to return start to finish
-				result.reverse();
-			}
-			else // not the destination
-			{
-				// find which nearby nodes are walkable
-				myNeighbours = Neighbours(myNode.x, myNode.y);
-				// test each one that hasn't been tried already
-				for(i = 0, j = myNeighbours.length; i < j; i++)
-				{
-					myPath = Node(myNode, myNeighbours[i]);
-					if (!AStar[myPath.value])
-					{
-						// estimated cost of this particular route so far
-						myPath.g = myNode.g + distanceFunction(myNeighbours[i], myNode);
-						// estimated cost of entire guessed route to the destination
-						myPath.f = myPath.g + distanceFunction(myNeighbours[i], mypathEnd);
-						// remember this new path for testing above
-						Open.push(myPath);
-						// mark this node in the maze graph as visited
-						AStar[myPath.value] = true;
-					}
-				}
-				// remember this route as having no more untested options
-				Closed.push(myNode);
-			}
-		} // keep iterating until the Open list is empty
-		return result;
-	}
-
-	// actually calculate the a-star path!
-	// this returns an array of coordinates
-	// that is empty if no path is possible
-	return calculatePath();
-
+	return Math.abs(Point.x - Goal.x) + Math.abs(Point.y - Goal.y);
 }
 
+// Usada para representar um nó no grafo
+function Node(Parent, Point)
+{
+	var newNode = {
+		// Apontador para o predecessor
+		Parent:Parent,
+		// Index do nó na matriz maze, acessamos maze como se fosse um array plano, isso é usado para facilitar a lógica nos outros passos
+		value:Point.x + (Point.y * mazeW),
+		x:Point.x,
+		y:Point.y,
+		// Valor da função heuristica
+		f:0,
+		// Valor da função custo
+		g:0
+	};
+
+	return newNode;
+}
+
+// Verifica se a celula na posição x,y não é um obstaculo
+function isWalkable(x, y)
+{
+	return ((maze[x] != null) && (maze[x][y] != null) && (maze[x][y] <= walkableSpace));
+}
+
+// Retorna os nós vizinhos nas direções Norte, Sul, Leste e Oeste
+function Neighbours(x, y)
+{
+	var	N = y - 1;
+	var S = y + 1;
+	var E = x + 1;
+	var W = x - 1;
+
+	myN = N > -1 && isWalkable(x, N);
+	myS = S < mazeH && isWalkable(x, S);
+	myE = E < mazeW && isWalkable(E, y);
+	myW = W > -1 && isWalkable(W, y);
+
+	result = [];
+	if(myN) result.push({x:x, y:N});
+	if(myE) result.push({x:E, y:y});
+	if(myS) result.push({x:x, y:S});
+	if(myW) result.push({x:W, y:y});
+
+	return result;
+}
+
+// Executa o A* retornando várias cordenadas
+function calculatePath()
+{
+	// Cria nós da posição inicial e final
+	var	mypathStart = Node(null, {x:pathStart[0], y:pathStart[1]});
+	var mypathEnd = Node(null, {x:pathEnd[0], y:pathEnd[1]});
+
+	// Vetor contendo todas as celulas do labirinto
+	var AStar = new Array(mazeSize);
+
+	// Vetor com os nós abertos, ou seja, os nós que ainda tiveram todos os seus vizinhos visitados e estão na pilha
+	var Open = [mypathStart];
+
+	// Vetor contendo os nós que já foram visitados e tiveram todos os seus vizinhos visitados e foram removidos da pilha
+	var Closed = [];
+
+	// Vetor contendo a solução 
+	var result = [];
+
+	// Apontador para o nó mais proxímo
+	var myNeighbours;
+
+	// O nó corrente
+	var myNode;
+
+	// reference to a Node (that starts a path in question)
+	var myPath;
+
+	var length, max, min, i, j;
+
+	// Itera sobre todos os nós abertos até não haver mais nenhum
+	while(length = Open.length)
+	{
+		max = mazeSize;
+		min = -1;
+
+		for(i = 0; i < length; i++)
+		{
+			if(Open[i].f < max)
+			{
+				max = Open[i].f;
+				min = i;
+			}
+		}
+
+		// Remove o proximo nó do vetor de abertos 
+		myNode = Open.splice(min, 1)[0];
+
+		// Verifica se chegamos ao final
+		if(myNode.value === mypathEnd.value)
+		{
+			myPath = Closed[Closed.push(myNode) - 1];
+			do
+			{
+				result.push([myPath.x, myPath.y]);
+			}
+			while (myPath = myPath.Parent);
+			
+			//AStar = Closed = Open = [];
+			// Retorna o resultado do primeiro para o ultimo
+			result.reverse();
+		}
+		else // Não chegamos ao final
+		{
+			// Encontra os nós mais proxímos que podemos caminhar
+			myNeighbours = Neighbours(myNode.x, myNode.y);
+
+			// Testamos todos os nós
+			for(i = 0, j = myNeighbours.length; i < j; i++)
+			{
+				myPath = Node(myNode, myNeighbours[i]);
+				if (!AStar[myPath.value])
+				{
+					// Função de custo
+					// Custo estimado até o nó + a advinhação até o proxímo nó
+					myPath.g = myNode.g + ManhattanDist(myNeighbours[i], myNode);
+
+					// Função heuristica
+					// Custo estimado de toda rota advinhada até o destino
+					myPath.f = myPath.g + ManhattanDist(myNeighbours[i], mypathEnd);
+					
+					// Armazena esse novo caminho para ser testado mais tarde
+					Open.push(myPath);
+
+					// Marca o nó no grafo como visitado
+					AStar[myPath.value] = true;
+				}
+			}
+
+			// Quando esse nó não tiver mais vizinho "fechamos" ele
+			Closed.push(myNode);
+		}
+	}
+	return result;
+}
