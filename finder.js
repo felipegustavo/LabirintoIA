@@ -295,6 +295,7 @@ function calculateAStar()
 	return result;
 }
 
+// Faz a busca em profundidade recursivamente
 function dfs(initX, initY)
 {
 	maze[initX][initY] = 4;
