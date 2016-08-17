@@ -1,6 +1,6 @@
 // Trabalho de IA
 // Problema: Labirinto
-// Eguipe 4: Felipe Souza Gomes e Rafael Sandes
+// Eguipe 4: Felipe Gustavo de Souza Gomes e Rafael Sandes Silva
 //
 // Canvas, onde o jogo será desenhado
 var canvas = null;
