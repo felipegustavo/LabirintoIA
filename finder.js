@@ -1,3 +1,7 @@
+// Trabalho de IA
+// Problema: Labirinto
+// Eguipe 4: Felipe Souza Gomes e Rafael Sandes
+//
 // Canvas, onde o jogo será desenhado
 var canvas = null;
 
@@ -21,7 +25,7 @@ var walkableSpace = 0;
 // Define o tamnaho máximo do labirinto
 var mazeSize =	mazeW * mazeH;
 
-// define o inicio e fim do labirinto
+// Define o inicio e fim do labirinto
 var pathStart = [0,0];
 var pathEnd = [15,15];
 var currentPath = [];
@@ -224,7 +228,6 @@ function calculateAStar()
 	// O nó corrente
 	var myNode;
 
-	// reference to a Node (that starts a path in question)
 	var myPath;
 
 	var length, max, min, i, j;
@@ -257,7 +260,6 @@ function calculateAStar()
 			}
 			while (myPath = myPath.Parent);
 			
-			//AStar = Closed = Open = [];
 			// Retorna o resultado do primeiro para o ultimo
 			result.reverse();
 		}
